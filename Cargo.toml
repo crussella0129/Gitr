@@ -1,0 +1,35 @@
+[workspace]
+members = [
+    "crates/gitr-core",
+    "crates/gitr-auth",
+    "crates/gitr-db",
+    "crates/gitr-host",
+    "crates/gitr-discover",
+    "crates/gitr-sync",
+    "crates/gitr-cli",
+]
+resolver = "2"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+rusqlite = { version = "0.32", features = ["bundled"] }
+clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+walkdir = "2"
+dirs = "6"
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+url = { version = "2", features = ["serde"] }
+comfy-table = "7"
+indicatif = "0.17"
+console = "0.15"
+async-trait = "0.1"
+tempfile = "3"

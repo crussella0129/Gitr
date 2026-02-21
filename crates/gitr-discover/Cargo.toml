@@ -1,0 +1,16 @@
+[package]
+name = "gitr-discover"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gitr-core = { path = "../gitr-core" }
+gitr-host = { path = "../gitr-host" }
+gitr-db = { path = "../gitr-db" }
+walkdir = { workspace = true }
+url = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

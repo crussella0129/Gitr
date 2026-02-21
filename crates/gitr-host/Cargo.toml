@@ -1,0 +1,18 @@
+[package]
+name = "gitr-host"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gitr-core = { path = "../gitr-core" }
+gitr-auth = { path = "../gitr-auth" }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+url = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }

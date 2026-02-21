@@ -1,0 +1,19 @@
+[package]
+name = "gitr-db"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gitr-core = { path = "../gitr-core" }
+rusqlite = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

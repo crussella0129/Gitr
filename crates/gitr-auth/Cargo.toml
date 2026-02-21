@@ -1,0 +1,10 @@
+[package]
+name = "gitr-auth"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gitr-core = { path = "../gitr-core" }
+keyring = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

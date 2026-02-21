@@ -1,0 +1,32 @@
+[package]
+name = "gitr-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "gitr"
+path = "src/main.rs"
+
+[dependencies]
+gitr-core = { path = "../gitr-core" }
+gitr-auth = { path = "../gitr-auth" }
+gitr-db = { path = "../gitr-db" }
+gitr-host = { path = "../gitr-host" }
+gitr-discover = { path = "../gitr-discover" }
+gitr-sync = { path = "../gitr-sync" }
+clap = { workspace = true }
+tokio = { workspace = true }
+comfy-table = { workspace = true }
+indicatif = { workspace = true }
+console = { workspace = true }
+serde = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+toml = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

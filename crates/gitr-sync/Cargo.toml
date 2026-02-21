@@ -1,0 +1,18 @@
+[package]
+name = "gitr-sync"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gitr-core = { path = "../gitr-core" }
+gitr-host = { path = "../gitr-host" }
+gitr-db = { path = "../gitr-db" }
+tokio = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+indicatif = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
