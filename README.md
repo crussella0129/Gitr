@@ -1,6 +1,6 @@
 # Gitr
 
-The Git sister of [Diffr](https://github.com/crussella0129/Diffr) — sync 300+ GitHub forks with their upstreams at the push of a button.
+The Git sister of [Diffr](https://github.com/crussella0129/Diffr) — sync all your GitHub forks with their upstreams at the push of a button.
 
 Gitr is a Rust CLI tool for managing git repos across multiple hosting services (GitHub, GitLab, Gitea, Bitbucket, Azure DevOps). It discovers your repos via API and filesystem scan, tracks fork relationships, and keeps everything in sync with configurable merge strategies.
 
