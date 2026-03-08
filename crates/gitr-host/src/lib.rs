@@ -76,6 +76,15 @@ pub trait HostProvider: Send + Sync {
     /// Get current rate limit status.
     async fn rate_limit_status(&self) -> Result<RateLimitInfo, GitrError>;
 
+    /// Sync a fork's branch from upstream using the host's server-side API.
+    /// Returns true if synced, false if already up-to-date or diverged (can't fast-forward).
+    async fn sync_fork_upstream(
+        &self,
+        owner: &str,
+        name: &str,
+        branch: &str,
+    ) -> Result<bool, GitrError>;
+
     /// The kind of host this provider handles.
     fn kind(&self) -> HostKind;
 }

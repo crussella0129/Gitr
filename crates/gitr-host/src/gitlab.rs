@@ -33,6 +33,10 @@ impl HostProvider for GitLabProvider {
         Err(GitrError::ProviderNotImplemented { kind: "gitlab".into() })
     }
 
+    async fn sync_fork_upstream(&self, _owner: &str, _name: &str, _branch: &str) -> Result<bool, GitrError> {
+        Err(GitrError::ProviderNotImplemented { kind: "gitlab".into() })
+    }
+
     fn kind(&self) -> HostKind {
         HostKind::GitLab
     }

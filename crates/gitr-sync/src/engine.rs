@@ -36,28 +36,30 @@ impl SyncEngine {
         let clone_base = clone_base_dir.to_path_buf();
         let strat = strategy.clone();
 
-        let handles: Vec<_> = repos
-            .into_iter()
-            .map(|(repo, upstream_url)| {
-                let sem = semaphore.clone();
-                let pb = multi.add(ProgressBar::new_spinner());
-                pb.set_style(style.clone());
-                pb.set_message(format!("syncing {}", repo.full_name));
-                let base = clone_base.clone();
-                let s = strat.clone();
+        let mut handles = Vec::new();
+        for (repo, upstream_url) in repos {
+            let sem = semaphore.clone();
+            let pb = multi.add(ProgressBar::new_spinner());
+            pb.set_style(style.clone());
+            pb.set_message(format!("syncing {}", repo.full_name));
+            let base = clone_base.clone();
+            let s = strat.clone();
 
-                tokio::task::spawn_blocking(move || {
-                    let _permit = sem.acquire_owned();
-                    let result = sync_fork(&repo, &upstream_url, &base, &s, dry_run);
-                    pb.finish_with_message(format!(
-                        "{}: {}",
-                        result.repo_full_name,
-                        result.record.status
-                    ));
-                    result
-                })
-            })
-            .collect();
+            // Acquire permit in async context before handing off to spawn_blocking.
+            // Dropping it inside the blocking closure releases the slot when done.
+            let permit = sem.acquire_owned().await.expect("semaphore closed");
+            let handle = tokio::task::spawn_blocking(move || {
+                let _permit = permit;
+                let result = sync_fork(&repo, &upstream_url, &base, &s, dry_run);
+                pb.finish_with_message(format!(
+                    "{}: {}",
+                    result.repo_full_name,
+                    result.record.status
+                ));
+                result
+            });
+            handles.push(handle);
+        }
 
         let mut results = Vec::new();
         for handle in handles {

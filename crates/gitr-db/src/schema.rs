@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS repos (
     is_fork             INTEGER NOT NULL DEFAULT 0,
     upstream_repo_id    TEXT,
     upstream_full_name  TEXT,
+    upstream_clone_url  TEXT,
     default_branch      TEXT NOT NULL DEFAULT 'main',
     discovery_source    TEXT NOT NULL DEFAULT 'api',
     last_synced_at      TEXT,

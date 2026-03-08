@@ -33,6 +33,10 @@ impl HostProvider for GiteaProvider {
         Err(GitrError::ProviderNotImplemented { kind: "gitea".into() })
     }
 
+    async fn sync_fork_upstream(&self, _owner: &str, _name: &str, _branch: &str) -> Result<bool, GitrError> {
+        Err(GitrError::ProviderNotImplemented { kind: "gitea".into() })
+    }
+
     fn kind(&self) -> HostKind {
         HostKind::Gitea
     }

@@ -109,8 +109,8 @@ fn row_to_host(row: &rusqlite::Row) -> rusqlite::Result<Host> {
 
 pub fn insert_repo(conn: &Connection, repo: &Repo) -> anyhow::Result<()> {
     conn.execute(
-        "INSERT INTO repos (id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, default_branch, discovery_source, last_synced_at, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+        "INSERT INTO repos (id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, upstream_clone_url, default_branch, discovery_source, last_synced_at, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
         params![
             repo.id.0.to_string(),
             repo.full_name,
@@ -122,6 +122,7 @@ pub fn insert_repo(conn: &Connection, repo: &Repo) -> anyhow::Result<()> {
             repo.is_fork as i32,
             repo.upstream_repo_id.as_ref().map(|id| id.0.to_string()),
             repo.upstream_full_name,
+            repo.upstream_clone_url,
             repo.default_branch,
             repo.discovery_source.to_string(),
             opt_dt(&repo.last_synced_at),
@@ -133,7 +134,7 @@ pub fn insert_repo(conn: &Connection, repo: &Repo) -> anyhow::Result<()> {
 
 pub fn get_repo_by_id(conn: &Connection, id: &RepoId) -> anyhow::Result<Option<Repo>> {
     let mut stmt = conn.prepare(
-        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, default_branch, discovery_source, last_synced_at, created_at
+        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, upstream_clone_url, default_branch, discovery_source, last_synced_at, created_at
          FROM repos WHERE id = ?1",
     )?;
     let mut rows = stmt.query(params![id.0.to_string()])?;
@@ -149,7 +150,7 @@ pub fn get_repo_by_full_name(
     full_name: &str,
 ) -> anyhow::Result<Option<Repo>> {
     let mut stmt = conn.prepare(
-        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, default_branch, discovery_source, last_synced_at, created_at
+        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, upstream_clone_url, default_branch, discovery_source, last_synced_at, created_at
          FROM repos WHERE host_id = ?1 AND full_name = ?2",
     )?;
     let mut rows = stmt.query(params![host_id.0.to_string(), full_name])?;
@@ -161,7 +162,7 @@ pub fn get_repo_by_full_name(
 
 pub fn list_repos(conn: &Connection) -> anyhow::Result<Vec<Repo>> {
     let mut stmt = conn.prepare(
-        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, default_branch, discovery_source, last_synced_at, created_at
+        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, upstream_clone_url, default_branch, discovery_source, last_synced_at, created_at
          FROM repos ORDER BY full_name",
     )?;
     let rows = stmt.query_map([], |row| row_to_repo(row))?;
@@ -170,7 +171,7 @@ pub fn list_repos(conn: &Connection) -> anyhow::Result<Vec<Repo>> {
 
 pub fn list_repos_for_host(conn: &Connection, host_id: &HostId) -> anyhow::Result<Vec<Repo>> {
     let mut stmt = conn.prepare(
-        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, default_branch, discovery_source, last_synced_at, created_at
+        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, upstream_clone_url, default_branch, discovery_source, last_synced_at, created_at
          FROM repos WHERE host_id = ?1 ORDER BY full_name",
     )?;
     let rows = stmt.query_map(params![host_id.0.to_string()], |row| row_to_repo(row))?;
@@ -179,7 +180,7 @@ pub fn list_repos_for_host(conn: &Connection, host_id: &HostId) -> anyhow::Resul
 
 pub fn list_fork_repos(conn: &Connection) -> anyhow::Result<Vec<Repo>> {
     let mut stmt = conn.prepare(
-        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, default_branch, discovery_source, last_synced_at, created_at
+        "SELECT id, full_name, owner, name, host_id, clone_url, local_path, is_fork, upstream_repo_id, upstream_full_name, upstream_clone_url, default_branch, discovery_source, last_synced_at, created_at
          FROM repos WHERE is_fork = 1 ORDER BY full_name",
     )?;
     let rows = stmt.query_map([], |row| row_to_repo(row))?;
@@ -232,10 +233,11 @@ fn row_to_repo(row: &rusqlite::Row) -> rusqlite::Result<Repo> {
     let is_fork: i32 = row.get(7)?;
     let upstream_repo_id: Option<String> = row.get(8)?;
     let upstream_full_name: Option<String> = row.get(9)?;
-    let default_branch: String = row.get(10)?;
-    let discovery_source_str: String = row.get(11)?;
-    let last_synced_str: Option<String> = row.get(12)?;
-    let created_str: String = row.get(13)?;
+    let upstream_clone_url: Option<String> = row.get(10)?;
+    let default_branch: String = row.get(11)?;
+    let discovery_source_str: String = row.get(12)?;
+    let last_synced_str: Option<String> = row.get(13)?;
+    let created_str: String = row.get(14)?;
 
     Ok(Repo {
         id: RepoId::from_uuid(Uuid::parse_str(&id_str).unwrap_or_default()),
@@ -250,6 +252,7 @@ fn row_to_repo(row: &rusqlite::Row) -> rusqlite::Result<Repo> {
             .and_then(|s| Uuid::parse_str(&s).ok())
             .map(RepoId::from_uuid),
         upstream_full_name,
+        upstream_clone_url,
         default_branch,
         discovery_source: discovery_source_str
             .parse()
@@ -257,6 +260,19 @@ fn row_to_repo(row: &rusqlite::Row) -> rusqlite::Result<Repo> {
         last_synced_at: last_synced_str.map(|s| parse_dt(&s)),
         created_at: parse_dt(&created_str),
     })
+}
+
+pub fn update_repo_upstream(
+    conn: &Connection,
+    id: &RepoId,
+    upstream_full_name: Option<&str>,
+    upstream_clone_url: Option<&str>,
+) -> anyhow::Result<()> {
+    conn.execute(
+        "UPDATE repos SET upstream_full_name = ?1, upstream_clone_url = ?2 WHERE id = ?3",
+        params![upstream_full_name, upstream_clone_url, id.0.to_string()],
+    )?;
+    Ok(())
 }
 
 // ── Collections ──

@@ -2,6 +2,8 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::Deserialize;
+use std::sync::Arc;
+use tokio::task::JoinSet;
 
 use gitr_core::error::GitrError;
 use gitr_core::models::host::HostKind;
@@ -188,7 +190,54 @@ impl HostProvider for GitHubProvider {
 
     async fn list_repos(&self) -> Result<Vec<RemoteRepo>, GitrError> {
         let gh_repos: Vec<GhRepo> = self.paginated_get("/user/repos", 100).await?;
-        Ok(gh_repos.into_iter().map(RemoteRepo::from).collect())
+        let mut results: Vec<RemoteRepo> = gh_repos.into_iter().map(RemoteRepo::from).collect();
+
+        // The list endpoint omits the `parent` field. Batch-fetch individual repo
+        // details for every fork that came back without upstream info.
+        let fork_indices: Vec<usize> = results
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| r.is_fork && r.upstream_full_name.is_none())
+            .map(|(i, _)| i)
+            .collect();
+
+        if !fork_indices.is_empty() {
+            let sem = Arc::new(tokio::sync::Semaphore::new(10));
+            let mut join_set: JoinSet<(usize, Option<RemoteRepo>)> = JoinSet::new();
+
+            for idx in fork_indices {
+                let client = self.client.clone();
+                let url = self.url(&format!(
+                    "/repos/{}/{}",
+                    results[idx].owner, results[idx].name
+                ));
+                let sem = sem.clone();
+
+                join_set.spawn(async move {
+                    let Ok(_permit) = sem.acquire_owned().await else {
+                        return (idx, None);
+                    };
+                    let resp = match client.get(&url).send().await {
+                        Ok(r) if r.status().is_success() => r,
+                        _ => return (idx, None),
+                    };
+                    let gh: GhRepo = match resp.json().await {
+                        Ok(g) => g,
+                        Err(_) => return (idx, None),
+                    };
+                    (idx, Some(RemoteRepo::from(gh)))
+                });
+            }
+
+            while let Some(Ok((idx, opt_enriched))) = join_set.join_next().await {
+                if let Some(enriched) = opt_enriched {
+                    results[idx].upstream_full_name = enriched.upstream_full_name;
+                    results[idx].upstream_clone_url = enriched.upstream_clone_url;
+                }
+            }
+        }
+
+        Ok(results)
     }
 
     async fn get_repo(&self, owner: &str, name: &str) -> Result<Option<RemoteRepo>, GitrError> {
@@ -328,6 +377,35 @@ impl HostProvider for GitHubProvider {
             remaining: rl.rate.remaining,
             reset_at,
         })
+    }
+
+    async fn sync_fork_upstream(
+        &self,
+        owner: &str,
+        name: &str,
+        branch: &str,
+    ) -> Result<bool, GitrError> {
+        let url = self.url(&format!("/repos/{owner}/{name}/merge-upstream"));
+        let body = serde_json::json!({ "branch": branch });
+        let resp = self
+            .client
+            .post(&url)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| GitrError::ApiError {
+                status: 0,
+                message: e.to_string(),
+            })?;
+
+        match resp.status().as_u16() {
+            200 => Ok(true),  // synced
+            409 => Ok(false), // diverged — fork is ahead, can't fast-forward
+            status => {
+                let body = resp.text().await.unwrap_or_default();
+                Err(GitrError::ApiError { status, message: body })
+            }
+        }
     }
 
     fn kind(&self) -> HostKind {

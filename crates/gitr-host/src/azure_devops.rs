@@ -33,6 +33,10 @@ impl HostProvider for AzureDevOpsProvider {
         Err(GitrError::ProviderNotImplemented { kind: "azure_devops".into() })
     }
 
+    async fn sync_fork_upstream(&self, _owner: &str, _name: &str, _branch: &str) -> Result<bool, GitrError> {
+        Err(GitrError::ProviderNotImplemented { kind: "azure_devops".into() })
+    }
+
     fn kind(&self) -> HostKind {
         HostKind::AzureDevOps
     }

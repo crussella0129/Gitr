@@ -33,6 +33,10 @@ impl HostProvider for BitbucketProvider {
         Err(GitrError::ProviderNotImplemented { kind: "bitbucket".into() })
     }
 
+    async fn sync_fork_upstream(&self, _owner: &str, _name: &str, _branch: &str) -> Result<bool, GitrError> {
+        Err(GitrError::ProviderNotImplemented { kind: "bitbucket".into() })
+    }
+
     fn kind(&self) -> HostKind {
         HostKind::Bitbucket
     }

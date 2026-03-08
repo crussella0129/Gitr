@@ -75,9 +75,16 @@ pub async fn run(args: ScanArgs) -> anyhow::Result<()> {
             match m {
                 RepoMatch::RemoteOnly(remote) => {
                     // Check if already tracked
-                    if gitr_db::ops::get_repo_by_full_name(&conn, &host.id, &remote.full_name)?
-                        .is_some()
-                    {
+                    if let Some(existing) = gitr_db::ops::get_repo_by_full_name(&conn, &host.id, &remote.full_name)? {
+                        // Update upstream info if we now have it but the DB entry didn't
+                        if existing.upstream_full_name.is_none() && remote.upstream_full_name.is_some() {
+                            gitr_db::ops::update_repo_upstream(
+                                &conn,
+                                &existing.id,
+                                remote.upstream_full_name.as_deref(),
+                                remote.upstream_clone_url.as_deref(),
+                            )?;
+                        }
                         continue;
                     }
 
@@ -90,15 +97,24 @@ pub async fn run(args: ScanArgs) -> anyhow::Result<()> {
                     );
                     repo.is_fork = remote.is_fork;
                     repo.upstream_full_name = remote.upstream_full_name.clone();
+                    repo.upstream_clone_url = remote.upstream_clone_url.clone();
 
                     gitr_db::ops::insert_repo(&conn, &repo)?;
                     tracked += 1;
                 }
                 RepoMatch::Matched { local, remote } => {
                     // Upsert — ensure tracked with local path
-                    if gitr_db::ops::get_repo_by_full_name(&conn, &host.id, &remote.full_name)?
-                        .is_none()
-                    {
+                    if let Some(existing) = gitr_db::ops::get_repo_by_full_name(&conn, &host.id, &remote.full_name)? {
+                        // Update upstream info if we now have it but the DB entry didn't
+                        if existing.upstream_full_name.is_none() && remote.upstream_full_name.is_some() {
+                            gitr_db::ops::update_repo_upstream(
+                                &conn,
+                                &existing.id,
+                                remote.upstream_full_name.as_deref(),
+                                remote.upstream_clone_url.as_deref(),
+                            )?;
+                        }
+                    } else {
                         let mut repo = Repo::new(
                             remote.full_name.clone(),
                             host.id.clone(),
@@ -108,6 +124,7 @@ pub async fn run(args: ScanArgs) -> anyhow::Result<()> {
                         );
                         repo.is_fork = remote.is_fork;
                         repo.upstream_full_name = remote.upstream_full_name.clone();
+                        repo.upstream_clone_url = remote.upstream_clone_url.clone();
                         repo.local_path = Some(local.path.clone());
                         gitr_db::ops::insert_repo(&conn, &repo)?;
                         tracked += 1;
